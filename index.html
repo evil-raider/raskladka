@@ -4,15 +4,24 @@ textarea{width:100%;height:140px;font:18px system-ui;padding:10px;box-sizing:bor
 #out{min-height:60px;padding:10px;background:#fff;border:1px solid #ddd;border-radius:8px;font-size:18px;white-space:pre-wrap}
 #st{color:#888;font-size:13px;margin:6px 0}#st.ok{color:#2a8a2a}</style></head><body>
 <h3>Исправление раскладки + автокопирование</h3>
-<textarea id="in" autofocus placeholder="Набирай здесь: ghbdtn rfr ltkf"></textarea>
+<textarea id="in" autofocus placeholder="Набирай здесь: ghbdtn rfr ltkf, или Руддщ"></textarea>
 <div id="st">Результат копируется в буфер автоматически при вводе</div>
 <div id="out"></div>
 <script>
 const en="`qwertyuiop[]asdfghjkl;'zxcvbnm,./~QWERTYUIOP{}ASDFGHJKL:\"ZXCVBNM<>?@#$^&|";
 const ru="ёйцукенгшщзхъфывапролджэячсмитьбю.ЁЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮ,\"№;:?/";
 const e2r={},r2e={};[...en].forEach((c,i)=>{e2r[c]=ru[i];r2e[ru[i]]=c});
+const isL=c=>/[a-z]/i.test(c),isC=c=>/[а-яё]/i.test(c);
+function swapWord(w,def){const ch=[...w];let res='';
+ for(let k=0;k<ch.length;k++){const c=ch[k];let m;
+  if(isL(c))m=e2r;else if(isC(c))m=r2e;else{let d=null;
+   for(let j=k-1;j>=0&&!d;j--){if(isL(ch[j]))d=e2r;else if(isC(ch[j]))d=r2e}
+   for(let j=k+1;j<ch.length&&!d;j++){if(isL(ch[j]))d=e2r;else if(isC(ch[j]))d=r2e}
+   m=d||def}
+  res+=m[c]??c}return res}
 function conv(t){const lat=(t.match(/[a-z]/gi)||[]).length,cyr=(t.match(/[а-яё]/gi)||[]).length;
- const m=lat>=cyr?e2r:r2e;return {dir:lat>=cyr?'EN→RU':'RU→EN',text:t.replace(/https?:\/\/\S+|\S+@\S+\.\S+/g,s=>'\u0000'+s+'\u0001').split(/(\u0000[^\u0001]*\u0001)/).map(p=>p[0]=='\u0000'?p.slice(1,-1):[...p].map(c=>m[c]??c).join('')).join('')}}
+ const def=lat>=cyr?e2r:r2e,dir=lat&&cyr?'EN⇄RU (смешанный)':lat>=cyr?'EN→RU':'RU→EN';
+ return {dir,text:t.split(/(\s+|https?:\/\/\S+|\S+@\S+\.\S+)/).map(p=>!p||/^\s+$/.test(p)||/^https?:\/\/|^\S+@\S+\.\S+$/.test(p)?p:swapWord(p,def)).join('')}}
 const i=document.getElementById('in'),o=document.getElementById('out'),s=document.getElementById('st');
 i.addEventListener('input',async()=>{const r=conv(i.value);o.textContent=r.text;if(!i.value){s.textContent='';return}
  try{await navigator.clipboard.writeText(r.text);s.className='ok';s.textContent=r.dir+' · скопировано ✓'}

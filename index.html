@@ -1,0 +1,20 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Раскладка → буфер</title>
+<style>body{font:16px system-ui;max-width:720px;margin:40px auto;padding:0 16px;background:#fafafa}
+textarea{width:100%;height:140px;font:18px system-ui;padding:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:8px}
+#out{min-height:60px;padding:10px;background:#fff;border:1px solid #ddd;border-radius:8px;font-size:18px;white-space:pre-wrap}
+#st{color:#888;font-size:13px;margin:6px 0}#st.ok{color:#2a8a2a}</style></head><body>
+<h3>Исправление раскладки + автокопирование</h3>
+<textarea id="in" autofocus placeholder="Набирай здесь: ghbdtn rfr ltkf"></textarea>
+<div id="st">Результат копируется в буфер автоматически при вводе</div>
+<div id="out"></div>
+<script>
+const en="`qwertyuiop[]asdfghjkl;'zxcvbnm,./~QWERTYUIOP{}ASDFGHJKL:\"ZXCVBNM<>?@#$^&|";
+const ru="ёйцукенгшщзхъфывапролджэячсмитьбю.ЁЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮ,\"№;:?/";
+const e2r={},r2e={};[...en].forEach((c,i)=>{e2r[c]=ru[i];r2e[ru[i]]=c});
+function conv(t){const lat=(t.match(/[a-z]/gi)||[]).length,cyr=(t.match(/[а-яё]/gi)||[]).length;
+ const m=lat>=cyr?e2r:r2e;return {dir:lat>=cyr?'EN→RU':'RU→EN',text:t.replace(/https?:\/\/\S+|\S+@\S+\.\S+/g,s=>'\u0000'+s+'\u0001').split(/(\u0000[^\u0001]*\u0001)/).map(p=>p[0]=='\u0000'?p.slice(1,-1):[...p].map(c=>m[c]??c).join('')).join('')}}
+const i=document.getElementById('in'),o=document.getElementById('out'),s=document.getElementById('st');
+i.addEventListener('input',async()=>{const r=conv(i.value);o.textContent=r.text;if(!i.value){s.textContent='';return}
+ try{await navigator.clipboard.writeText(r.text);s.className='ok';s.textContent=r.dir+' · скопировано ✓'}
+ catch(e){s.className='';s.textContent=r.dir+' · не удалось скопировать: '+e.message}});
+</script></body></html>

@@ -2,10 +2,12 @@
 <style>body{font:16px system-ui;max-width:720px;margin:40px auto;padding:0 16px;background:#fafafa}
 textarea{width:100%;height:140px;font:18px system-ui;padding:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:8px}
 #out{min-height:60px;padding:10px;background:#fff;border:1px solid #ddd;border-radius:8px;font-size:18px;white-space:pre-wrap}
-#st{color:#888;font-size:13px;margin:6px 0}#st.ok{color:#2a8a2a}</style></head><body>
+#st{color:#888;font-size:13px;margin:6px 0}#st.ok{color:#2a8a2a}
+button{font:14px system-ui;padding:6px 12px;margin:6px 0;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer}</style></head><body>
 <h3>Исправление раскладки + автокопирование</h3>
 <textarea id="in" autofocus placeholder="Набирай здесь: ghbdtn rfr ltkf, или Руддщ"></textarea>
-<div id="st">Результат копируется в буфер автоматически при вводе</div>
+<button id="pb" title="Взять текст из буфера, исправить и скопировать обратно">📋 Из буфера</button>
+<div id="st">При возврате на вкладку текст из буфера обрабатывается автоматически</div>
 <div id="out"></div>
 <script>
 const en="`qwertyuiop[]asdfghjkl;'zxcvbnm,./~QWERTYUIOP{}ASDFGHJKL:\"ZXCVBNM<>?@#$^&|";
@@ -22,8 +24,29 @@ function swapWord(w,def){const ch=[...w];let res='';
 function conv(t){const lat=(t.match(/[a-z]/gi)||[]).length,cyr=(t.match(/[а-яё]/gi)||[]).length;
  const def=lat>=cyr?e2r:r2e,dir=lat&&cyr?'EN⇄RU (смешанный)':lat>=cyr?'EN→RU':'RU→EN';
  return {dir,text:t.split(/(\s+|https?:\/\/\S+|\S+@\S+\.\S+)/).map(p=>!p||/^\s+$/.test(p)||/^https?:\/\/|^\S+@\S+\.\S+$/.test(p)?p:swapWord(p,def)).join('')}}
-const i=document.getElementById('in'),o=document.getElementById('out'),s=document.getElementById('st');
-i.addEventListener('input',async()=>{const r=conv(i.value);o.textContent=r.text;if(!i.value){s.textContent='';return}
- try{await navigator.clipboard.writeText(r.text);s.className='ok';s.textContent=r.dir+' · скопировано ✓'}
- catch(e){s.className='';s.textContent=r.dir+' · не удалось скопировать: '+e.message}});
+const i=document.getElementById('in'),o=document.getElementById('out'),s=document.getElementById('st'),pb=document.getElementById('pb');
+const say=(t,ok)=>{s.className=ok?'ok':'';s.textContent=t};
+// последний результат, который мы сами положили в буфер — чтобы не конвертировать его обратно
+let last=localStorage.getItem('rk_last')||'';
+async function run(t){const r=conv(t);o.textContent=r.text;if(!t){say('');return}
+ try{await navigator.clipboard.writeText(r.text);last=r.text;localStorage.setItem('rk_last',last);say(r.dir+' · скопировано ✓',1)}
+ catch(e){say(r.dir+' · не удалось скопировать: '+e.message)}}
+i.addEventListener('input',()=>run(i.value));
+// Ctrl+V заменяет старый текст целиком (запасной вариант для Firefox/Safari)
+i.addEventListener('paste',e=>{const t=e.clipboardData.getData('text');if(!t)return;e.preventDefault();i.value=t;run(t)});
+let busy=false,lastGrab=0;
+async function grab(force){
+ if(busy)return;
+ if(!force){if(document.visibilityState!=='visible'||!document.hasFocus()||Date.now()-lastGrab<800)return}
+ busy=true;lastGrab=Date.now();
+ try{const t=await navigator.clipboard.readText();
+  if(!t.trim())say('Буфер пуст');
+  else if(t===last&&!force)say('В буфере уже исправленный текст — пропущено',1);
+  else{i.value=t;await run(t)}
+ }catch(e){say('Нет доступа к буферу ('+e.message+'). Нажми Ctrl+V в поле или кнопку «Из буфера»')}
+ finally{busy=false}}
+window.addEventListener('focus',()=>grab());
+document.addEventListener('visibilitychange',()=>setTimeout(()=>grab(),50));
+pb.addEventListener('click',()=>{grab(true);i.focus()});
+grab();
 </script></body></html>
